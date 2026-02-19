@@ -3,38 +3,6 @@
 <head>
   <meta charset="UTF-8" />
   <title>VILIV Batch Node</title>
-  <style>
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI",
-        Roboto, "Noto Sans KR", Arial, sans-serif;
-      line-height: 1.7;
-      padding: 24px;
-      max-width: 980px;
-      margin: auto;
-      color: #222;
-    }
-    h1, h2, h3 {
-      border-bottom: 1px solid #e5e7eb;
-      padding-bottom: 6px;
-    }
-    code, pre {
-      background: #f6f8fa;
-      padding: 12px;
-      border-radius: 6px;
-      display: block;
-      overflow-x: auto;
-    }
-    ul {
-      margin-left: 20px;
-    }
-    .box {
-      background: #f9fafb;
-      border: 1px solid #e5e7eb;
-      padding: 16px;
-      border-radius: 8px;
-      margin: 16px 0;
-    }
-  </style>
 </head>
 <body>
 
