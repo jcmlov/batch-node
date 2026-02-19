@@ -1,0 +1,45 @@
+{
+  "name": "viliv-batch-node",
+  "version": "1.0.0",
+  "description": "VILIV ERP Batch (Node.js)",
+  "main": "src/app.js",
+  "bin": "src/app.js",
+  "scripts": {
+    "start:local": "cross-env NODE_ENV=local node src/app.js",
+    "start:dev": "cross-env NODE_ENV=dev node src/app.js",
+    "start:stg": "cross-env NODE_ENV=stg node src/app.js",
+    "start:prod": "cross-env NODE_ENV=prod node src/app.js",
+    "batch:local": "cross-env NODE_ENV=local node src/batch-runner.js",
+    "batch:dev": "cross-env NODE_ENV=dev node src/batch-runner.js",
+    "batch:stg": "cross-env NODE_ENV=stg node src/batch-runner.js",
+    "batch:prod": "cross-env NODE_ENV=prod node src/batch-runner.js",
+    "dev": "cross-env NODE_ENV=local nodemon src/app.js",
+    "build:win": "pkg . --targets node18-win-x64 --output dist/viliv-batch-node.exe",
+    "build:linux": "pkg . --targets node18-linux-x64 --output dist/viliv-batch-node"
+  },
+  "pkg": {
+    "assets": [
+      "src/**/*.js",
+      ".env.*"
+    ],
+    "options": [
+      "--no-bytecode"
+    ]
+  },
+  "dependencies": {
+    "axios": "^1.6.7",
+    "camelcase-keys": "^5.2.0",
+    "cron": "^3.1.7",
+    "dayjs": "^1.11.19",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "pg": "^8.17.1"
+  },
+  "devDependencies": {
+    "cross-env": "^10.1.0",
+    "nodemon": "^3.1.11"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
