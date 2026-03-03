@@ -56,12 +56,12 @@ exports.run = async (type = "BATCH_SYSTEM") => {
           }
 
           const item = camelcaseKeys(rawItem, { deep: true });
-
           const param = {
             ...item,
             prodNm: item.prodDes,
             balFlag: item.balFlag === "0" ? "N" : "Y",
-            rePchPrc: parseInt(parseFloat(item.inPrice || "0"), 10) || 0,
+            rcvUprc: parseInt(parseFloat(item.inPrice || "0"), 10) || 0,
+            rcvUprcVatYn: item.inPriceVat === "0" ? "N" : "Y",
           };
 
           await repo.upsertProduct(param, type, client);

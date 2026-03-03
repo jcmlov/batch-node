@@ -16,6 +16,8 @@ async function upsertProduct(item, rgtrId) {
         size_des,
         unit,
         bal_flag,
+        rcv_uprc,
+        rcv_uprc_vat_yn,
         reg_dt,
         rgtr_id,
         del_yn
@@ -29,8 +31,10 @@ async function upsertProduct(item, rgtrId) {
         $4,
         $5,
         $6,
-        CURRENT_TIMESTAMP,
         $7,
+        $8,
+        CURRENT_TIMESTAMP,
+        $9,
         'N'
     )
     ON CONFLICT (prod_cd)
@@ -39,8 +43,10 @@ async function upsertProduct(item, rgtrId) {
         size_des = EXCLUDED.size_des,
         unit     = EXCLUDED.unit,
         bal_flag = EXCLUDED.bal_flag,
+        rcv_uprc = EXCLUDED.rcv_uprc,
+        rcv_uprc_vat_yn = EXCLUDED.rcv_uprc_vat_yn,
         mdfcn_dt = CURRENT_TIMESTAMP,
-        mdfr_id  = $7,
+        mdfr_id  = $9,
         del_yn   = 'N'
   `;
 
@@ -51,6 +57,8 @@ async function upsertProduct(item, rgtrId) {
     item.sizeDes,
     item.unit,
     item.balFlag,
+    item.rcvUprc,
+    item.rcvUprcVatYn,
     rgtrId,
   ];
 

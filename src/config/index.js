@@ -41,7 +41,7 @@ module.exports = {
     // ecount
     ecountErp: process.env.BATCH_CRON_ECOUNT_ERP,
     // 🔥 inventory
-    inventory: process.env.BATCH_CRON_INVENTORY,
+    inventory: process.env.BATCH_CRON_INVENTORY_TEN,
     yesterdayInventory: process.env.BATCH_CRON_YESTERDAY_INVENTORY,
   },
 };
