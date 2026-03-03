@@ -40,6 +40,8 @@ async function upsertProduct(item, rgtrId) {
     ON CONFLICT (prod_cd)
     DO UPDATE SET
         gds_nm   = EXCLUDED.gds_nm,
+        sku_id   = EXCLUDED.sku_id,
+        prod_cd  = EXCLUDED.prod_cd,
         size_des = EXCLUDED.size_des,
         unit     = EXCLUDED.unit,
         bal_flag = EXCLUDED.bal_flag,
