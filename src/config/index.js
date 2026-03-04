@@ -24,6 +24,7 @@ module.exports = {
   },
   batch: {
     enabled: process.env.BATCH_ENABLED === "true",
+    timezone: "Asia/Seoul",
   },
   naver: {
     clientId: process.env.NAVER_CLIENT_ID,
@@ -34,6 +35,17 @@ module.exports = {
     userId: process.env.ECOUNT_USER_ID,
     apiCertKey: process.env.ECOUNT_API_CERT_KEY,
   },
+  // 🔥 PlayAuto 추가
+  playauto: {
+    apiKey: process.env.PLAYAUTO_API_KEY,
+    userId: process.env.PLAYAUTO_USER_ID,
+    password: process.env.PLAYAUTO_PASSWORD,
+    tokenUrl: process.env.PLAYAUTO_TOKEN_URL,
+    depotUrl: process.env.PLAYAUTO_DEPOT_URL,
+    stockListUrl: process.env.PLAYAUTO_STOCK_LIST_URL,
+    baseUrl: process.env.PLAYAUTO_BASE_URL, // 🔥 추가 권장
+    timeout: Number(process.env.PLAYAUTO_TIMEOUT || 10000),
+  },
   cron: {
     // shopping rank
     morning: process.env.BATCH_CRON_MORNING,
@@ -41,7 +53,12 @@ module.exports = {
     // ecount
     ecountErp: process.env.BATCH_CRON_ECOUNT_ERP,
     // 🔥 inventory
+    ecountTodayInventory: process.env.BATCH_CRON_ECOUNT_TODAY_INVENTORY,
     inventory: process.env.BATCH_CRON_INVENTORY_TEN,
     yesterdayInventory: process.env.BATCH_CRON_YESTERDAY_INVENTORY,
+
+    // 🔥 playauto
+    playautoDepot: process.env.BATCH_CRON_PLAYAUTO_DPT,
+    playautoSkuList: process.env.BATCH_CRON_PLAYAUTO_SKU_LIST,
   },
 };

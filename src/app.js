@@ -2,10 +2,14 @@ const express = require("express");
 const config = require("./config");
 const shoppingRankCron = require("./scheduler/shoppingRank.cron");
 const ecountProductCron = require("./scheduler/ecountErpProduct.cron");
+const ecountTodayInventoryCron = require("./scheduler/ecountErpTodayInventory.cron");
 const ecountInventoryCron = require("./scheduler/ecountErpInventory.cron");
+const playautoDepotCron = require("./scheduler/playautoDepot.cron");
+const playautoSkuListCron = require("./scheduler/playautoSkuList.cron");
 const shoppingRankJob = require("./batch/jobs/shoppingRank.job");
 const ecountProductJob = require("./batch/jobs/ecountErpProduct.job");
 const ecountInventoryJob = require("./batch/jobs/ecountErpInventory.job");
+const { playautoDepotSyncJob } = require("./batch/jobs/playautoDepotSync.job");
 
 const app = express();
 app.use(express.json());
@@ -57,6 +61,23 @@ app.post("/api/ecount/inventory/batch/run", async (req, res) => {
   }
 });
 
+// 🔥 PlayAuto 배송처 동기화 (수동 실행 API 추가)
+app.post("/api/playauto/dpt/batch/run", async (req, res) => {
+  try {
+    await playautoDepotSyncJob();
+
+    res.json({
+      success: true,
+      message: "PlayAuto DPT sync completed",
+    });
+  } catch (e) {
+    res.status(500).json({
+      success: false,
+      message: e.message,
+    });
+  }
+});
+
 // ========================
 // Start Server & Cron Jobs
 // ========================
@@ -66,5 +87,8 @@ app.listen(config.port, () => {
   // ✅ cron 자동 시작
   shoppingRankCron.start();
   ecountProductCron.start();
+  ecountTodayInventoryCron.start();
   ecountInventoryCron.start();
+  playautoDepotCron.start();
+  playautoSkuListCron.start();
 });
