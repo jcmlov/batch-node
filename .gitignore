@@ -1,33 +1,115 @@
-# Dependency directories (용량이 크고 npm install로 생성 가능하므로 제외)
+# =========================
+# Dependency directories
+# =========================
 node_modules/
 jspm_packages/
+.pnpm-store/
+npm-packages-offline-cache/
 
-# Debug log files
+# =========================
+# Logs
+# =========================
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
 
-# OS metadata
-.DS_Store
-Thumbs.db
+# =========================
+# Runtime files
+# =========================
+pids/
+*.pid
+*.seed
+*.pid.lock
 
-# 환경 변수 파일 (보안상 절대 올리면 안 됨)
+# =========================
+# Environment files (蹂댁븞)
+# =========================
 .env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+.env.*
+!.env.example
 
-# Build outputs (빌드 결과물)
+# =========================
+# Build outputs
+# =========================
 dist/
 build/
 out/
+coverage/
+.nyc_output/
 
-# IDE settings (개인 설정 파일)
+# =========================
+# Cache
+# =========================
+.cache/
+.tmp/
+temp/
+tmp/
+
+# =========================
+# OS metadata
+# =========================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# =========================
+# IDE / Editor
+# =========================
 .vscode/
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-*.sw?
+*.swp
+*.swo
+
+# =========================
+# Node / npm
+# =========================
+package-lock.json.old
+npm-shrinkwrap.json
+
+# =========================
+# Test files
+# =========================
+test-results/
+coverage/
+*.lcov
+
+# =========================
+# Docker
+# =========================
+.docker/
+docker-compose.override.yml
+
+# =========================
+# Batch / Scheduler logs
+# =========================
+batch/logs/
+scheduler/logs/
+
+# =========================
+# Local database files
+# =========================
+*.sqlite
+*.db
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.temp
+*.bak
+
+# =========================
+# Misc
+# =========================
+*.tgz
+*.tar
+*.zip
+*.7z
