@@ -6,6 +6,10 @@ const config = require("../config");
  * @param {string|null} token
  */
 function createPlayautoClient(token = null) {
+  if (!config.playauto.baseUrl) {
+    throw new Error("config.playauto.baseUrl (PLAYAUTO_BASE_URL) is required");
+  }
+
   const headers = {
     "x-api-key": config.playauto.apiKey,
     "Content-Type": "application/json",
@@ -16,6 +20,7 @@ function createPlayautoClient(token = null) {
   }
 
   return axios.create({
+    baseURL: config.playauto.baseUrl, // ✅ 핵심
     timeout: config.playauto.timeout,
     headers,
   });

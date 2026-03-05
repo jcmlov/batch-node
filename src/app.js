@@ -6,6 +6,9 @@ const ecountTodayInventoryCron = require("./scheduler/ecountErpTodayInventory.cr
 const ecountInventoryCron = require("./scheduler/ecountErpInventory.cron");
 const playautoDepotCron = require("./scheduler/playautoDepot.cron");
 const playautoSkuListCron = require("./scheduler/playautoSkuList.cron");
+const playautoSkuPriceCron = require("./scheduler/playautoSkuPrice.cron");
+const playautoStockCondCron = require("./scheduler/playautoStockCondition.cron");
+const playautoStockManageCron = require("./scheduler/playautoStockManage.cron");
 const shoppingRankJob = require("./batch/jobs/shoppingRank.job");
 const ecountProductJob = require("./batch/jobs/ecountErpProduct.job");
 const ecountInventoryJob = require("./batch/jobs/ecountErpInventory.job");
@@ -89,6 +92,10 @@ app.listen(config.port, () => {
   ecountProductCron.start();
   ecountTodayInventoryCron.start();
   ecountInventoryCron.start();
+  // ✅ playauto
   playautoDepotCron.start();
   playautoSkuListCron.start();
+  playautoSkuPriceCron.start();
+  playautoStockCondCron.start();
+  playautoStockManageCron.start();
 });

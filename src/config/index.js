@@ -43,6 +43,10 @@ module.exports = {
     tokenUrl: process.env.PLAYAUTO_TOKEN_URL,
     depotUrl: process.env.PLAYAUTO_DEPOT_URL,
     stockListUrl: process.env.PLAYAUTO_STOCK_LIST_URL,
+    skuAddUrl: process.env.PLAYAUTO_SKU_ADD_URL,
+    skuEditUrl: process.env.PLAYAUTO_SKU_EDIT_URL,
+    stockCondUrl: process.env.PLAYAUTO_STOCK_COND_URL,
+    stockManageUrl: process.env.PLAYAUTO_STOCK_MANAGE_URL,
     baseUrl: process.env.PLAYAUTO_BASE_URL, // 🔥 추가 권장
     timeout: Number(process.env.PLAYAUTO_TIMEOUT || 10000),
   },
@@ -60,5 +64,8 @@ module.exports = {
     // 🔥 playauto
     playautoDepot: process.env.BATCH_CRON_PLAYAUTO_DPT,
     playautoSkuList: process.env.BATCH_CRON_PLAYAUTO_SKU_LIST,
+    playautoSkuPrice: process.env.BATCH_CRON_PLAYAUTO_SKU_PRICE,
+    playautoStockCond: process.env.BATCH_CRON_PLAYAUTO_STOCK_COND,
+    playautoStockManage: process.env.BATCH_CRON_PLAYAUTO_STOCK_MANAGE,
   },
 };
