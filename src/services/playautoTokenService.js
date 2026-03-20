@@ -3,34 +3,61 @@ const { createPlayautoClient } = require("./playautoHttpClient");
 
 const API_NAME = "PLAYAUTO";
 const LOCK_KEY = 777001;
+const ACTOR = "BATCH";
 
-/**
- * 🔥 PlayAuto 토큰 발급
- */
-async function issueToken() {
-  const http = createPlayautoClient();
+function resolveTokenPath() {
+  const raw = (config.playauto.tokenUrl || "").trim();
 
-  const response = await http.post(config.playauto.tokenUrl, {
-    email: config.playauto.userId,
-    password: config.playauto.password,
-  });
-
-  if (!response.data || !response.data[0]) {
-    throw new Error("PlayAuto 토큰 발급 실패");
+  if (!raw) {
+    return "/api/auth";
   }
 
-  const { token, sol_no } = response.data[0];
+  if (raw.startsWith("http://") || raw.startsWith("https://")) {
+    try {
+      const parsed = new URL(raw);
+      return parsed.pathname || "/api/auth";
+    } catch (_) {
+      return "/api/auth";
+    }
+  }
 
-  return {
-    token,
-    solNo: sol_no,
-    expireDt: new Date(Date.now() + 24 * 60 * 60 * 1000),
-  };
+  if (raw === "/auth" || raw === "auth") {
+    return "/api/auth";
+  }
+
+  return raw.startsWith("/") ? raw : `/${raw}`;
 }
 
-/**
- * 🔥 DB에서 현재 활성 토큰 조회
- */
+async function issueToken() {
+  try {
+    const response = await client.post("/api/auth", {
+      email: process.env.PLAYAUTO_EMAIL,
+      password: process.env.PLAYAUTO_PASSWORD,
+    });
+
+    const payload = Array.isArray(response.data)
+      ? response.data[0]
+      : response.data;
+
+    if (!payload?.token) {
+      throw new Error("PLAYAUTO token missing");
+    }
+
+    return payload;
+  } catch (err) {
+    console.error("[PLAYAUTO][AUTH] FAILED", {
+      status: err.response?.status,
+      statusText: err.response?.statusText,
+      data: err.response?.data,
+      baseURL: client.defaults.baseURL,
+      url: "/api/auth",
+      hasApiKey: Boolean(process.env.PLAYAUTO_API_KEY),
+      email: process.env.PLAYAUTO_EMAIL,
+    });
+    throw err;
+  }
+}
+
 async function getActiveToken(client) {
   const { rows } = await client.query(
     `
@@ -50,9 +77,6 @@ async function getActiveToken(client) {
   return rows[0] || null;
 }
 
-/**
- * 🔥 토큰 저장 (기존 토큰 비활성화 포함)
- */
 async function saveToken(client, tokenData) {
   const { token, solNo, expireDt } = tokenData;
 
@@ -61,12 +85,12 @@ async function saveToken(client, tokenData) {
     UPDATE api_tkn_mst
        SET use_yn   = 'N',
            mdfcn_dt = CURRENT_TIMESTAMP,
-           mdfr_id  = 'BATCH'
+           mdfr_id  = $2
      WHERE api_nm = $1
        AND use_yn = 'Y'
        AND del_yn = 'N'
     `,
-    [API_NAME],
+    [API_NAME, ACTOR],
   );
 
   await client.query(
@@ -89,29 +113,48 @@ async function saveToken(client, tokenData) {
         $3,
         $4,
         CURRENT_TIMESTAMP,
-        'BATCH',
+        $5,
         'N',
         'Y'
     )
     `,
-    [API_NAME, token, solNo, expireDt],
+    [API_NAME, token, solNo, expireDt, ACTOR],
   );
 
   return {
     accessToken: token,
+    token,
     solNo,
   };
 }
 
-/**
- * =========================================================
- * 🔥🔥🔥 통합 진입 함수
- * =========================================================
- */
+async function refreshToken(client) {
+  const lockRes = await client.query(
+    "SELECT pg_try_advisory_lock($1) as locked",
+    [LOCK_KEY],
+  );
+
+  if (lockRes.rows?.[0]?.locked) {
+    try {
+      const newToken = await issueToken();
+      const saved = await saveToken(client, newToken);
+      return saved.accessToken;
+    } finally {
+      await client.query("SELECT pg_advisory_unlock($1)", [LOCK_KEY]);
+    }
+  }
+
+  const active = await getActiveToken(client);
+  if (!active?.acs_tkn) {
+    throw new Error("PlayAuto 토큰 재조회 실패");
+  }
+
+  return active.acs_tkn;
+}
+
 async function getPlayautoAuth(client) {
   let active = await getActiveToken(client);
 
-  // 1️⃣ 토큰 없으면 발급
   if (!active) {
     const newToken = await issueToken();
     return await saveToken(client, newToken);
@@ -120,32 +163,26 @@ async function getPlayautoAuth(client) {
   const now = new Date();
   const expireAt = new Date(active.expr_dt);
 
-  // 2️⃣ 만료 5분 전이면 갱신
   if (expireAt - now < 5 * 60 * 1000) {
-    const lockRes = await client.query(
-      "SELECT pg_try_advisory_lock($1) as locked",
-      [LOCK_KEY],
-    );
-
-    if (lockRes.rows[0].locked) {
-      try {
-        const newToken = await issueToken();
-        return await saveToken(client, newToken);
-      } finally {
-        await client.query("SELECT pg_advisory_unlock($1)", [LOCK_KEY]);
-      }
-    }
-
-    // 다른 프로세스가 갱신 중이면 재조회
+    const refreshedToken = await refreshToken(client);
     active = await getActiveToken(client);
+
+    return {
+      accessToken: refreshedToken,
+      token: refreshedToken,
+      solNo: active?.sol_no,
+    };
   }
 
   return {
     accessToken: active.acs_tkn,
+    token: active.acs_tkn,
     solNo: active.sol_no,
   };
 }
 
 module.exports = {
   getPlayautoAuth,
+  refreshToken,
+  issueToken,
 };

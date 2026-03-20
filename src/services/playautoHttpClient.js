@@ -1,10 +1,6 @@
 const axios = require("axios");
 const config = require("../config");
 
-/**
- * 🔥 PlayAuto 공통 axios 인스턴스 생성
- * @param {string|null} token
- */
 function createPlayautoClient(token = null) {
   if (!config.playauto.baseUrl) {
     throw new Error("config.playauto.baseUrl (PLAYAUTO_BASE_URL) is required");
@@ -12,7 +8,7 @@ function createPlayautoClient(token = null) {
 
   const headers = {
     "x-api-key": config.playauto.apiKey,
-    "Content-Type": "application/json",
+    "Content-Type": "application/json; charset=UTF-8",
   };
 
   if (token) {
@@ -20,7 +16,7 @@ function createPlayautoClient(token = null) {
   }
 
   return axios.create({
-    baseURL: config.playauto.baseUrl, // ✅ 핵심
+    baseURL: config.playauto.baseUrl,
     timeout: config.playauto.timeout,
     headers,
   });

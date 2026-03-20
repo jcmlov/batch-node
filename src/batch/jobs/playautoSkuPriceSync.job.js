@@ -24,6 +24,11 @@ exports.run = async (runType = "SKU_PRICE_SYNC") => {
     jobFn: async (client, stat) => {
       const LOCK_KEY = 888201;
       const ACTOR = "BATCH";
+      const TEST_TARGET_PROD_CDS = [
+        "8809615362129",
+        "880961534161",
+        "8809615364178",
+      ];
 
       // stat 확장 사용(프레임워크가 기본 3개만 줘도 JS 객체라 추가 가능)
       stat.skipCnt = 0;
@@ -208,7 +213,14 @@ exports.run = async (runType = "SKU_PRICE_SYNC") => {
            WHERE del_yn = 'N'
              AND use_yn = 'Y'
              AND prod_cd IS NOT NULL
+             AND prod_cd = ANY($1)
+           ORDER BY prod_cd
           `,
+          [TEST_TARGET_PROD_CDS],
+        );
+
+        console.log(
+          `[JOB][PLAYAUTO][SKU_PRICE] 테스트 대상 prod_cd=${TEST_TARGET_PROD_CDS.join(", ")}`,
         );
 
         // =====================================================

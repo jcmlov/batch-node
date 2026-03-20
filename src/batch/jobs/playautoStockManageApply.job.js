@@ -13,6 +13,11 @@ exports.run = async (type = "STOCK_MANAGE_APPLY") => {
     jobFn: async (client, stat) => {
       const LOCK_KEY = 888202;
       const ACTOR = "BATCH";
+      const TEST_TARGET_PROD_CDS = [
+        "8809615362129",
+        "880961534161",
+        "8809615364178",
+      ];
 
       const today = dayjs().format("YYYYMMDD");
       const yesterday = dayjs().subtract(1, "day").format("YYYYMMDD");
@@ -31,6 +36,10 @@ exports.run = async (type = "STOCK_MANAGE_APPLY") => {
       const bsYmd = check.rows.length ? today : yesterday;
 
       console.log(`[STOCK_SYNC] 기준일=${bsYmd}`);
+
+      console.log(
+        `[JOB][PLAYAUTO][STK_MNG] 테스트 대상 prod_cd=${TEST_TARGET_PROD_CDS.join(", ")}`,
+      );
 
       const lockRes = await client.query(
         "SELECT pg_try_advisory_lock($1) AS locked",
@@ -93,8 +102,9 @@ exports.run = async (type = "STOCK_MANAGE_APPLY") => {
             FROM inv_sts_hist
            WHERE base_ymd = $1
              AND del_yn = 'N'
+             AND prod_cd = ANY($2)
           `,
-          [bsYmd],
+          [bsYmd, TEST_TARGET_PROD_CDS],
         );
 
         for (const r of ecRes.rows || []) {

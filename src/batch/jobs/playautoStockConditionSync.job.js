@@ -17,6 +17,11 @@ exports.run = async (type = "STOCK_COND_SYNC") => {
     jobFn: async (client, stat) => {
       const LOCK_KEY = 888201;
       const ACTOR = "BATCH";
+      const TEST_TARGET_PROD_CDS = [
+        "8809615362129",
+        "880961534161",
+        "8809615364178",
+      ];
 
       // 동시 실행 방지
       const lockRes = await client.query(
@@ -52,6 +57,25 @@ exports.run = async (type = "STOCK_COND_SYNC") => {
 
         const bsYmd = check.rows.length ? today : yesterday;
 
+        const targetProdRes = await client.query(
+          `
+          SELECT prod_cd
+            FROM gds_mst
+           WHERE del_yn = 'N'
+             AND use_yn = 'Y'
+             AND prod_cd = ANY($1)
+          `,
+          [TEST_TARGET_PROD_CDS],
+        );
+
+        const targetProdCdSet = new Set(
+          (targetProdRes.rows || []).map((row) => String(row.prodCd || "")),
+        );
+
+        console.log(
+          `[JOB][PLAYAUTO][STK_COND] 테스트 대상 prod_cd=${Array.from(targetProdCdSet).join(", ")}`,
+        );
+
         const limit = 100;
         let start = 0;
         let recordsTotal = 0;
@@ -80,6 +104,12 @@ exports.run = async (type = "STOCK_COND_SYNC") => {
           if (results.length === 0) break;
 
           for (const r of results) {
+            const skuCd = String(r?.sku_cd || "");
+
+            if (!targetProdCdSet.has(skuCd)) {
+              continue;
+            }
+
             stat.totalCnt++;
 
             try {
