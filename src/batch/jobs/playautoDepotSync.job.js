@@ -57,7 +57,11 @@ exports.run = async (type = "PLAYAUTO_DPT_SYNC") => {
         for (const item of apiList) {
           stat.totalCnt++;
 
+          const savepointName = `sp_playauto_dpt_${stat.totalCnt}`;
+
           try {
+            await client.query(`SAVEPOINT ${savepointName}`);
+
             const dptNo = Number(item.no); // API 배송처번호
             if (!Number.isFinite(dptNo)) {
               throw new Error(`배송처번호(no) 형식 오류: ${item?.no}`);
@@ -65,62 +69,107 @@ exports.run = async (type = "PLAYAUTO_DPT_SYNC") => {
 
             apiDptNos.push(dptNo);
 
-            await client.query(
+            const params = [
+              solNo,
+              dptNo,
+              boolToYN(item.default_yn),
+              item.name,
+              item.address,
+              item.zip,
+              item.charge_name,
+              ACTOR,
+            ];
+
+            const updateRes = await client.query(
               `
-              INSERT INTO dpt_mst (
-                  dpt_id,
-                  sol_no,
-                  dpt_no,
-                  dflt_yn,
-                  dpt_nm,
-                  addr,
-                  zip_no,
-                  pic_nm,
-                  reg_dt,
-                  rgtr_id,
-                  del_yn,
-                  use_yn
-              )
-              VALUES (
-                  (SELECT fn_create_pk('DPT_MST')),
-                  $1,
-                  $2,
-                  $3,
-                  $4,
-                  $5,
-                  $6,
-                  $7,
-                  CURRENT_TIMESTAMP,
-                  $8,
-                  'N',
-                  'Y'
-              )
-              ON CONFLICT (sol_no, dpt_no)
-              DO UPDATE SET
-                  dflt_yn  = EXCLUDED.dflt_yn,
-                  dpt_nm   = EXCLUDED.dpt_nm,
-                  addr     = EXCLUDED.addr,
-                  zip_no   = EXCLUDED.zip_no,
-                  pic_nm   = EXCLUDED.pic_nm,
-                  use_yn   = 'Y',
-                  del_yn   = 'N',
-                  mdfcn_dt = CURRENT_TIMESTAMP,
-                  mdfr_id  = $8
+              UPDATE dpt_mst
+                 SET dflt_yn  = $3,
+                     dpt_nm   = $4,
+                     addr     = $5,
+                     zip_no   = $6,
+                     pic_nm   = $7,
+                     use_yn   = 'Y',
+                     del_yn   = 'N',
+                     mdfcn_dt = CURRENT_TIMESTAMP,
+                     mdfr_id  = $8
+               WHERE sol_no = $1
+                 AND dpt_no = $2
               `,
-              [
-                solNo,
-                dptNo,
-                boolToYN(item.default_yn),
-                item.name,
-                item.address,
-                item.zip,
-                item.charge_name,
-                ACTOR,
-              ],
+              params,
             );
 
+            if (updateRes.rowCount === 0) {
+              await client.query(
+                `
+                INSERT INTO dpt_mst (
+                    dpt_id,
+                    sol_no,
+                    dpt_no,
+                    dflt_yn,
+                    dpt_nm,
+                    addr,
+                    zip_no,
+                    pic_nm,
+                    reg_dt,
+                    rgtr_id,
+                    del_yn,
+                    use_yn
+                )
+                SELECT
+                    (SELECT fn_create_pk('DPT_MST')),
+                    $1,
+                    $2,
+                    $3,
+                    $4,
+                    $5,
+                    $6,
+                    $7,
+                    CURRENT_TIMESTAMP,
+                    $8,
+                    'N',
+                    'Y'
+                WHERE NOT EXISTS (
+                    SELECT 1
+                      FROM dpt_mst
+                     WHERE sol_no = $1
+                       AND dpt_no = $2
+                )
+                `,
+                params,
+              );
+
+              await client.query(
+                `
+                UPDATE dpt_mst
+                   SET dflt_yn  = $3,
+                       dpt_nm   = $4,
+                       addr     = $5,
+                       zip_no   = $6,
+                       pic_nm   = $7,
+                       use_yn   = 'Y',
+                       del_yn   = 'N',
+                       mdfcn_dt = CURRENT_TIMESTAMP,
+                       mdfr_id  = $8
+                 WHERE sol_no = $1
+                   AND dpt_no = $2
+                `,
+                params,
+              );
+            }
+
+            await client.query(`RELEASE SAVEPOINT ${savepointName}`);
             stat.successCnt++;
           } catch (e) {
+            try {
+              await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
+              await client.query(`RELEASE SAVEPOINT ${savepointName}`);
+            } catch (rollbackErr) {
+              console.error(
+                `[JOB][PLAYAUTO][DPT][ROLLBACK_FAIL] dpt_no=${item?.no}`,
+                rollbackErr.message,
+              );
+            }
+
             stat.failCnt++;
             console.error(
               `[JOB][PLAYAUTO][DPT][FAIL] dpt_no=${item?.no}`,

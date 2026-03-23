@@ -2,6 +2,10 @@ const config = require("../config");
 const { createPlayautoClient } = require("./playautoHttpClient");
 const { getPlayautoAuth, refreshToken } = require("./playautoTokenService");
 
+function isAuthErrorResponse(data) {
+  return data?.error_code === 401;
+}
+
 async function applyPlayautoRealStockDelta(
   client,
   { skuCd, dptNo, type, count },
@@ -20,7 +24,10 @@ async function applyPlayautoRealStockDelta(
   try {
     return await requestManage(accessToken, { skuCd, dptNo, type, count });
   } catch (err) {
-    if (err?.response?.status === 401) {
+    if (
+      err?.response?.status === 401 ||
+      isAuthErrorResponse(err?.response?.data)
+    ) {
       accessToken = await refreshToken(client);
       return await requestManage(accessToken, { skuCd, dptNo, type, count });
     }
@@ -29,6 +36,10 @@ async function applyPlayautoRealStockDelta(
 }
 
 async function requestManage(token, { skuCd, dptNo, type, count }) {
+  if (!token) {
+    throw new Error("PlayAuto accessToken 누락");
+  }
+
   const http = createPlayautoClient(token);
 
   const payload = {
@@ -39,6 +50,15 @@ async function requestManage(token, { skuCd, dptNo, type, count }) {
   };
 
   const res = await http.put(config.playauto.stockManageUrl, payload);
+
+  if (isAuthErrorResponse(res?.data)) {
+    const error = new Error("PlayAuto 재고수정 API 인증 오류");
+    error.response = {
+      status: 401,
+      data: res.data,
+    };
+    throw error;
+  }
 
   if (!res?.data) throw new Error("PlayAuto 재고수정 API 응답 오류");
   return res.data;

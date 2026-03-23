@@ -6,13 +6,20 @@ function createPlayautoClient(token = null) {
     throw new Error("config.playauto.baseUrl (PLAYAUTO_BASE_URL) is required");
   }
 
+  if (!config.playauto.apiKey) {
+    throw new Error("config.playauto.apiKey (PLAYAUTO_API_KEY) is required");
+  }
+
+  const normalizedToken =
+    typeof token === "string" && token.trim() ? token.trim() : null;
+
   const headers = {
-    "x-api-key": config.playauto.apiKey,
     "Content-Type": "application/json; charset=UTF-8",
+    "x-api-key": config.playauto.apiKey,
   };
 
-  if (token) {
-    headers.Authorization = `Token ${token}`;
+  if (normalizedToken) {
+    headers.Authorization = `Token ${normalizedToken}`;
   }
 
   return axios.create({

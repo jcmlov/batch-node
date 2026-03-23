@@ -4,6 +4,8 @@ const { createPlayautoClient } = require("./playautoHttpClient");
 const API_NAME = "PLAYAUTO";
 const LOCK_KEY = 777001;
 const ACTOR = "BATCH";
+const REFRESH_BUFFER_MS = 5 * 60 * 1000;
+const TOKEN_EXPIRE_MS = 24 * 60 * 60 * 1000;
 
 function resolveTokenPath() {
   const raw = (config.playauto.tokenUrl || "").trim();
@@ -28,34 +30,44 @@ function resolveTokenPath() {
   return raw.startsWith("/") ? raw : `/${raw}`;
 }
 
+function normalizeActiveToken(row) {
+  if (!row) return null;
+
+  const accessToken = typeof row.acs_tkn === "string" ? row.acs_tkn.trim() : "";
+  const solNo = row.sol_no ?? null;
+  const expireDt = row.expr_dt ? new Date(row.expr_dt) : null;
+  const hasValidExpireDt = expireDt && !Number.isNaN(expireDt.getTime());
+
+  return {
+    accessToken: accessToken || null,
+    token: accessToken || null,
+    solNo,
+    expireDt: hasValidExpireDt ? expireDt : null,
+  };
+}
+
 async function issueToken() {
-  try {
-    const response = await client.post("/api/auth", {
-      email: process.env.PLAYAUTO_EMAIL,
-      password: process.env.PLAYAUTO_PASSWORD,
-    });
+  const httpClient = createPlayautoClient();
+  const tokenPath = resolveTokenPath();
 
-    const payload = Array.isArray(response.data)
-      ? response.data[0]
-      : response.data;
+  const response = await httpClient.post(tokenPath, {
+    email: config.playauto.userId,
+    password: config.playauto.password,
+  });
 
-    if (!payload?.token) {
-      throw new Error("PLAYAUTO token missing");
-    }
+  const payload = Array.isArray(response.data)
+    ? response.data[0]
+    : response.data;
 
-    return payload;
-  } catch (err) {
-    console.error("[PLAYAUTO][AUTH] FAILED", {
-      status: err.response?.status,
-      statusText: err.response?.statusText,
-      data: err.response?.data,
-      baseURL: client.defaults.baseURL,
-      url: "/api/auth",
-      hasApiKey: Boolean(process.env.PLAYAUTO_API_KEY),
-      email: process.env.PLAYAUTO_EMAIL,
-    });
-    throw err;
+  if (!payload?.token) {
+    throw new Error("PlayAuto 토큰 발급 실패");
   }
+
+  return {
+    token: payload.token,
+    solNo: payload.sol_no,
+    expireDt: new Date(Date.now() + TOKEN_EXPIRE_MS),
+  };
 }
 
 async function getActiveToken(client) {
@@ -79,6 +91,10 @@ async function getActiveToken(client) {
 
 async function saveToken(client, tokenData) {
   const { token, solNo, expireDt } = tokenData;
+
+  if (!token) {
+    throw new Error("PlayAuto 저장 대상 토큰 누락");
+  }
 
   await client.query(
     `
@@ -125,6 +141,7 @@ async function saveToken(client, tokenData) {
     accessToken: token,
     token,
     solNo,
+    expireDt,
   };
 }
 
@@ -144,41 +161,38 @@ async function refreshToken(client) {
     }
   }
 
-  const active = await getActiveToken(client);
-  if (!active?.acs_tkn) {
+  const active = normalizeActiveToken(await getActiveToken(client));
+  if (!active?.accessToken) {
     throw new Error("PlayAuto 토큰 재조회 실패");
   }
 
-  return active.acs_tkn;
+  return active.accessToken;
 }
 
 async function getPlayautoAuth(client) {
-  let active = await getActiveToken(client);
+  let active = normalizeActiveToken(await getActiveToken(client));
 
-  if (!active) {
+  if (!active?.accessToken) {
     const newToken = await issueToken();
     return await saveToken(client, newToken);
   }
 
-  const now = new Date();
-  const expireAt = new Date(active.expr_dt);
+  const now = Date.now();
+  const expireAt = active.expireDt?.getTime?.() || 0;
 
-  if (expireAt - now < 5 * 60 * 1000) {
+  if (!expireAt || expireAt - now < REFRESH_BUFFER_MS) {
     const refreshedToken = await refreshToken(client);
-    active = await getActiveToken(client);
+    active = normalizeActiveToken(await getActiveToken(client));
 
     return {
       accessToken: refreshedToken,
       token: refreshedToken,
-      solNo: active?.sol_no,
+      solNo: active?.solNo,
+      expireDt: active?.expireDt || null,
     };
   }
 
-  return {
-    accessToken: active.acs_tkn,
-    token: active.acs_tkn,
-    solNo: active.sol_no,
-  };
+  return active;
 }
 
 module.exports = {

@@ -126,7 +126,7 @@ exports.run = async (type = "SKU_LIST_SYNC") => {
       VALUES (
           (SELECT fn_create_pk('SKU_HIS')),
           $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,
-          $16,'N','Y'
+          'N','Y'
       )
       `,
           [
@@ -311,7 +311,7 @@ exports.run = async (type = "SKU_LIST_SYNC") => {
         VALUES (
             (SELECT fn_create_pk('SKU_OPTN_HIS')),
             $1,$2,$3,$4,$5,$6,$7,
-            $8,$9,'N','Y'
+            $8,'N','Y'
         )
         `,
             [
@@ -496,7 +496,7 @@ exports.run = async (type = "SKU_LIST_SYNC") => {
         VALUES (
             (SELECT fn_create_pk('SKU_DPT_STK_HIS')),
             $1,$2,$3,$4,$5,$6,$7,
-            $8,$9,'N','Y'
+            $8,'N','Y'
         )
         `,
             [
@@ -609,7 +609,11 @@ exports.run = async (type = "SKU_LIST_SYNC") => {
           for (const item of results) {
             stat.totalCnt++;
 
+            const savepointName = `sp_playauto_sku_list_${start}_${stat.totalCnt}`;
+
             try {
+              await client.query(`SAVEPOINT ${savepointName}`);
+
               const skuCd = item.sku_cd;
               if (!skuCd) throw new Error("sku_cd 누락");
 
@@ -635,8 +639,19 @@ exports.run = async (type = "SKU_LIST_SYNC") => {
                 isNewSku,
               );
 
+              await client.query(`RELEASE SAVEPOINT ${savepointName}`);
               stat.successCnt++;
             } catch (e) {
+              try {
+                await client.query(`ROLLBACK TO SAVEPOINT ${savepointName}`);
+                await client.query(`RELEASE SAVEPOINT ${savepointName}`);
+              } catch (rollbackErr) {
+                console.error(
+                  `[JOB][PLAYAUTO][SKU_LIST][ROLLBACK_FAIL] sku_cd=${item?.sku_cd}`,
+                  rollbackErr.message,
+                );
+              }
+
               stat.failCnt++;
               console.error(
                 `[JOB][PLAYAUTO][SKU_LIST][FAIL] sku_cd=${item?.sku_cd}`,
